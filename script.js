@@ -1,7 +1,7 @@
 // ===== CART (products.html) =====
 $(document).ready(function () {
-  // Load saved cart (empty array if nothing saved yet)
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  // In-memory array for cart items (resets on page refresh)
+  let cart = [];
 
   // Add to Cart button
   $(".add-to-cart").click(function () {
@@ -9,9 +9,13 @@ $(document).ready(function () {
     let price = Number($(this).data("price"));
 
     // Check if the product is already in the cart
-    let item = cart.find(function (product) {
-      return product.name === name;
-    });
+    let item = null;
+    for (let i = 0; i < cart.length; i++) {
+      if (cart[i].name === name) {
+        item = cart[i];
+        break;
+      }
+    }
 
     if (item) {
       item.quantity++;
@@ -19,7 +23,6 @@ $(document).ready(function () {
       cart.push({ name: name, price: price, quantity: 1 });
     }
 
-    saveCart();
     showCart();
     showMessage(name + " was added to your cart.", "text-success");
   });
@@ -29,7 +32,6 @@ $(document).ready(function () {
     let index = Number($(this).data("index"));
     cart.splice(index, 1);
 
-    saveCart();
     showCart();
     showMessage("Item removed.", "text-success");
   });
@@ -37,7 +39,6 @@ $(document).ready(function () {
   // Clear Cart button
   $("#clear-cart").click(function () {
     cart = [];
-    saveCart();
     showCart();
     showMessage("Cart cleared.", "text-success");
   });
@@ -50,15 +51,9 @@ $(document).ready(function () {
     }
 
     cart = [];
-    saveCart();
     showCart();
     showMessage("Thank you! Your order was placed.", "text-success");
   });
-
-  // Save cart in the browser
-  function saveCart() {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }
 
   // Show the cart items and total
   function showCart() {
@@ -67,11 +62,12 @@ $(document).ready(function () {
 
     if (cart.length === 0) {
       $("#cart-items").html(
-        '<tr><td colspan="5" class="text-center">Your cart is empty.</td></tr>',
+        '<tr><td colspan="5" class="text-center">Your cart is empty.</td></tr>'
       );
     }
 
-    cart.forEach(function (item, index) {
+    for (let i = 0; i < cart.length; i++) {
+      let item = cart[i];
       let subtotal = item.price * item.quantity;
       total += subtotal;
 
@@ -82,11 +78,11 @@ $(document).ready(function () {
           <td>${item.quantity}</td>
           <td>₱${subtotal.toFixed(2)}</td>
           <td>
-            <button class="btn btn-danger btn-sm remove-item" data-index="${index}">Remove</button>
+            <button class="btn btn-danger btn-sm remove-item" data-index="${i}">Remove</button>
           </td>
         </tr>
       `);
-    });
+    }
 
     $("#total").text("₱" + total.toFixed(2));
   }
@@ -105,8 +101,8 @@ $(document).ready(function () {
 
 // ===== REVIEWS (reviews.html) =====
 $(document).ready(function () {
-  // Load saved reviews (empty array if nothing saved yet)
-  let reviews = JSON.parse(localStorage.getItem("reviews")) || [];
+  // In-memory array for reviews (resets on page refresh)
+  let reviews = [];
 
   // Submit the review form
   $("#reviewForm").submit(function (event) {
@@ -123,23 +119,24 @@ $(document).ready(function () {
       return;
     }
 
+    // Get current date string manually
+    let today = new Date();
+    let dateString = (today.getMonth() + 1) + "/" + today.getDate() + "/" + today.getFullYear();
+
     // Create review object and add it to the array
     let review = {
       name: name,
       rating: rating,
       comment: reviewText,
-      date: new Date().toLocaleDateString(),
+      date: dateString,
     };
     reviews.push(review);
-
-    // Save reviews in the browser
-    localStorage.setItem("reviews", JSON.stringify(reviews));
 
     displayReviews();
     $("#reviewForm")[0].reset();
     showMessage(
       "Thank you! Your review was submitted successfully.",
-      "success",
+      "success"
     );
   });
 
@@ -148,7 +145,6 @@ $(document).ready(function () {
     let index = Number($(this).attr("data-index"));
 
     reviews.splice(index, 1);
-    localStorage.setItem("reviews", JSON.stringify(reviews));
 
     displayReviews();
     showMessage("Review deleted successfully.", "success");
@@ -169,11 +165,18 @@ $(document).ready(function () {
 
     let totalRating = 0;
 
-    reviews.forEach(function (review, index) {
+    for (let i = 0; i < reviews.length; i++) {
+      let review = reviews[i];
       totalRating += review.rating;
 
       // Stars, e.g. 4 -> ★★★★☆
-      let stars = "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
+      let stars = "";
+      for (let s = 0; s < review.rating; s++) {
+        stars += "★";
+      }
+      for (let s = 0; s < (5 - review.rating); s++) {
+        stars += "☆";
+      }
 
       // Build the review card
       let card = $("<div>").addClass("card border mb-3");
@@ -185,7 +188,7 @@ $(document).ready(function () {
         .addClass("btn btn-outline-danger btn-sm delete-review")
         .attr("type", "button")
         .attr("aria-label", "Delete review")
-        .attr("data-index", index)
+        .attr("data-index", i)
         .html('<i class="bi bi-trash"></i>');
 
       let header = $("<div>")
@@ -201,7 +204,7 @@ $(document).ready(function () {
       cardBody.append(header, rating, comment, date);
       card.append(cardBody);
       $("#reviewsList").append(card);
-    });
+    }
 
     // Update the summary
     let average = reviews.length > 0 ? totalRating / reviews.length : 0;
